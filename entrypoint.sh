@@ -133,21 +133,33 @@ if [[ ${PROGRAM} == "node" ]]; then
 
     # Check existence of /data/db
     if [ ! -d "/data/db" ]; then
-        echo "Error: make sure the directory /data/db exists." 1>&2
-        exit 1
-    fi
-
-    DATABASE_SIZE=$(du -sb /data/db | cut -f1)
-
-    # Check size of /data/db (check against a trivial size)
-    if [[ $DATABASE_SIZE -lt 1048576 ]]; then
-        echo "Error: make sure the directory /data/db contains a (recent) blockchain archive." 1>&2
-        exit 1
+        mkdir -p /data/db
     fi
 fi
 
 DIRECTORY=/app/${NETWORK}
 export LD_LIBRARY_PATH=${DIRECTORY}
+
+[ $FULL_ARCHIVE = "true" ] && python3 /app/adjust_config.py --mode=prefs --file=${DIRECTORY}/config/prefs.toml --full-archive
+
+[ $ELASTICSEARCH_ENABLE = "true" ] && python3 /app/adjust_config.py --mode=external --file=${DIRECTORY}/config/external.toml --elasticsearch-enable
+[ $ELASTICSEARCH_USE_KIBANA = "true" ] && python3 /app/adjust_config.py --mode=external --file=${DIRECTORY}/config/external.toml --elasticsearch-use-kibana
+[ $EVENT_NOTIFIER_ENABLE = "true" ] && python3 /app/adjust_config.py --mode=external --file=${DIRECTORY}/config/external.toml --event-notifier-enable
+[ $EVENT_NOTIFIER_USE_AUTHORIZATION = "true" ] && python3 /app/adjust_config.py --mode=external --file=${DIRECTORY}/config/external.toml --event-notifier-use-authorization
+[ $COVALENT_ENABLE = "true" ] && python3 /app/adjust_config.py --mode=external --file=${DIRECTORY}/config/external.toml --covalent-enable
+
+python3 /app/adjust_config.py --mode=external --file=${DIRECTORY}/config/external.toml \
+    --elasticsearch-indexer-cache-size=${ELASTICSEARCH_INDEXER_CACHE_SIZE} \
+    --elasticsearch-bulk-request-max-size-in-bytes=${ELASTICSEARCH_BULK_REQUEST_MAX_SIZE_IN_BYTES} \
+    --elasticsearch-url=${ELASTICSEARCH_URL} \
+    --elasticsearch-username=${ELASTICSEARCH_USERNAME} \
+    --elasticsearch-password=${ELASTICSEARCH_PASSWORD} \
+    --event-notifier-proxy-url=${EVENT_NOTIFIER_PROXY_URL} \
+    --event-notifier-username=${EVENT_NOTIFIER_USERNAME} \
+    --event-notifier-password=${EVENT_NOTIFIER_PASSWORD} \
+    --covalent-proxy-url=${COVALENT_PROXY_URL} \
+    --covalent-route-send-data=${COVALENT_ROUTE_SEND_DATA} \
+    --covalent-route-acknowledge-data=${COVALENT_ROUTE_ACKNOWLEDGE_DATA}
 
 # Run the main process:
 cd ${DIRECTORY}
